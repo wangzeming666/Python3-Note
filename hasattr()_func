@@ -1,0 +1,8 @@
+This is a class 'builtin_function_or_method'
+
+Help on built-in function hasattr in module builtins:
+
+hasattr(obj, name, /)
+    Return whether the object has an attribute with the given name.
+    
+    This is done by calling getattr(obj, name) and catching AttributeError.
