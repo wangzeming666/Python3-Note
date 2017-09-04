@@ -1,0 +1,6 @@
+This is a class 'builtin_function_or_method'
+
+setattr(obj, name, value, /)
+  Sets the named attribute on the given object to the specified value.
+  
+  setattr(x, y, v) is equivalent to ''x.y = v''
