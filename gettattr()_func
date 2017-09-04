@@ -1,0 +1,10 @@
+This is a class 'builtin_function_or_method'
+
+Help on built-in function getattr in module builtins:
+
+getattr(...)
+    getattr(object, name[, default]) -> value
+    
+    Get a named attribute from an object; getattr(x, 'y') is equivalent to x.y.
+    When a default argument is given, it is returned when the attribute doesn't
+    exist; without it, an exception is raised in that case.
