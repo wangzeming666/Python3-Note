@@ -1,0 +1,19 @@
+__slots__属性的作用：
+                限定一个类创建实例只能有固定的实例变量
+                不允许实例添加列表以外的实例变量（属性）
+                防止用户因错写实例变量名称而发生错误
+            说明：
+                __slots__属性
+                
+                
+示例：
+
+class student:
+  __slots__ = ['name', 'age']
+  def __init__(self):
+      self.name = 'abc'
+      self.age = 10
+      
+s = student()
+s.score = 99
+# ArttributeError 此处出现属性错误
