@@ -5,37 +5,158 @@
 外键  foreign key[(a[,b])]
 关联  references
 
-
+20170909 数据库编程 DAY2
+==================
+概念设计-ER图 （哪些实体，实力里有哪些属性）
+逻辑设计-数据类型，主键，外键（1:1, 1:n, n:n）
 示例：
+primary key 主键
+not null 非空
 
-    
-mysql> create table teachers(
-    -> name varchar(20) not null primary key,
-    -> gender varchar(20),
-    -> rank varchar(20)
-    -> );
-    
-create table courses(
-    -> c_id int not null primaty key,
-    -> name varchar(20),
-    -> credit int,
-    -> ISBN varchar(20),
-    -> instructor varchar(20)，
-    -> foreign key(ISBN) references textbooks(ISBN),
-    -> foreign key(instructor) references teachers(name));    
-    
-    
+CREATE TABLE students (
+s_id int not null primary key,
+name varchar(20),
+gender varchar(20),
+age int,
+address varchar(50)
+);
+
+教师
+ID(PK) 姓名 性别 级别
+1         杨威  女   讲师
+2         老魏  男   讲师
+3         老冯  男   总监
+
+课程
+课程号(PK) 课程名    学费
+1                python   2万
+2                java        3万
+3                c++        1万
+
+教师
+ID(PK) 姓名 性别 级别 授课号（FP）
+1         杨威  女   讲师   4
+2         老魏  男   讲师   3
+3         老冯  男   总监   3
+
+
+create table registration (
+s_id int not null,
+c_id int not null,
+term varchar(20),
+grade decimal(4, 1),
+primary key(s_id, c_id),
+foreign key(s_id) references students(s_id),
+foreign key(c_id) references courses(c_id)
+);
+
+foreign key: 外键
+references：关联
+
+create table teachers (
+name varchar(20) not null primary key,
+gender varchar(20),
+rank varchar(20)
+);
+teacher:教师
+rank: 级别
+gender：性别
+
 create table textbooks (
 ISBN varchar(20) not null primary key,
 name varchar(20),
 auther varchar(20),
 publisher varchar(20)
+);
+ISBN: 出版物唯一识别的ID号，像身份证
+auther：作者
+publisher：出版社
+textbooks: 教材
+
+create table courses(
+c_id int not null primary key,
+name varchar(20),
+credit int,
+ISBN varchar(20),
+instructor varchar(20),
+foreign key(ISBN) references textbooks(ISBN),
+foreign key(instructor) references teachers(name)
+);
+
+注册表
+s_id   c_id    term学期   grade成绩
+1       python  201707   90
+1       java        201609   95
+2       java        201503   80
+...
+
+insert into students values(1, 'Ann', 'F', 21, 'Beijing');
+
+insert into teachers values('Yang', 'F', 'Instructor');
+insert into teachers values('Wei', 'M', 'Instructor');
 
 
-mysql> create table registration(
-    -> s_id int not null, c_id not null,
-    -> term varchar(20),
-    -> grade decimal(4,1),
-    -> primary key(s_id, c_id),
-    -> foreign key(s_id) references students(s_id),
-    -> foreign key(c_id) references courses(c_id)
+insert into textbooks values('00000', 'Intro to SQL', 'Yang', 'Renmin Press');
+
+insert into courses values(1, 'Databases', 3, '00000', 'Yang');
+
+insert into registration values(1, 1, '201708', 95);
+
+update registration set grade = 85 where s_id = 1 and c_id = 1;
+
+
+
+多表查询以及外键的作用
+
+select 姓名 from 教师 where 授课号=2;
+
+课程
+课程号(PK) 课程名    学费  
+1                python   2万    
+2                java        3万   
+3                c++        1万    
+
+教师
+ID(PK) 姓名 性别 级别 授课号（FK）
+1         杨威  女   讲师   2
+2         老魏  男   讲师   1
+3         老冯  男   总监   3
+
+select 姓名，课程名 from 教师, 课程
+where  教师.授课号 = 课程.课程号;
+
+姓名 课程名
+杨威 java
+老魏 python
+老冯 c++
+
+select teachers.name, teachers.rank, courses.name 
+from teachers, courses 
+where courses.instructor = teachers.name;
+
+要查询的内容：
+teachers.name, teachers.rank, courses.name, courses.credit
+要求：teachers.rank = 'prefessor' OR 'instructor'
+
+select teachers.name, teachers.rank, courses.name, courses.credit from teachers, courses
+where courses.instructor = teachers.name and teachers.rank = 'prefessor';
+
+
+学生常见疑问2：
+FK外键拆入空置null
+insert into courses values (2, 'Advanced Python', 2, '00000', null);
+
+
+
+级联修改或删除
+create table registration (
+s_id int not null,
+c_id int not null,
+term varchar(20),
+grade decimal(4, 1),
+primary key(s_id, c_id),
+foreign key(s_id) references students(s_id) on delete cascade on update cascade,
+foreign key(c_id) references courses(c_id) on delete cascade on update cascade
+);
+
+on delete cascade on update cascade 意思：如果外键对应数据被删除或者修改，将关联数据完全删除或者相应地修改。
