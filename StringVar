@@ -1,0 +1,2 @@
+Tkinter中一些组件(Button, Label等) 如果设置一个textvariable属性为一个StringVar(IntVar, DoubleVar)对象。
+当这个对象的值被重新设置的时候，组件上的显示文字就会自动变成新的值。
