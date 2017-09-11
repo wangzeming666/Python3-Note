@@ -1,0 +1,5 @@
+为一个表插入另一个已经存在的表
+
+INSERT INTO first_table_name(cloumn1,cloumn2...,cloumnN)
+SELECT column1, column2...,columnN
+FROM second_table_name
