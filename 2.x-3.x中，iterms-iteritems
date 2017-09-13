@@ -1,0 +1,8 @@
+在Python2.x中，items( )用于 返回一个字典的拷贝列表【Returns a copy of the list of all items (key/value pairs) in D】，占额外的内存。
+
+iteritems() 用于返回本身字典列表操作后的迭代【Returns an iterator on all items(key/value pairs) in D】，不占用额外的内存。
+
+
+
+Python 3.x 里面，iteritems() 和 viewitems() 这两个方法都已经废除了，而 items() 得到的结果是和 2.x 里面 viewitems() 一致的。
+在3.x 里 用 items()替换iteritems() ，可以用于 for 来循环遍历。
