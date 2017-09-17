@@ -1,0 +1,55 @@
+from socket import *
+from time import ctime
+
+HOST = '' #空白变量表示可以使用任何可用的地址
+PORT = 21567 #随机端口号
+BUFSIZ = 1024 #对于此应用程序，将缓冲区大小设置为１kb
+ADDR = (HOST, PORT) #网络地址＝主机号＋端口号，是个元组
+
+#分配了ＴＣＰ服务器套接字
+tcpSerSock = socket(AF_INET, SOCK_STREAM)
+tcpSerSock.bind(ADDR) #将套接字绑定到服务器地址
+'''开启ＴＣＰ监听器，参数５是在连接被转接或拒绝之前，
+传入连接请求的最大数'''
+tcpSerSock.listen(5)
+
+#一旦进入服务器的无线循环中，就被动的等待客户端的连接
+while True:
+    print('waiting for connection...')
+    
+    '''当一个连接请求出现时，进入对话循环中，
+    在该循环中等待客户端发送的消息'''
+    # accept()返回值有两个：客户端的套接字，客户端的地址
+  　　tcpCliSock, addr = tcpSerSock.accept()
+    print('...connected from:', addr)
+
+    #通信循环
+    while True:
+        data = tcpCliSock.recv(BUFSIZ).decode()
+
+        '''如果消息是空白的，意味着客户端已经退出，
+        此时将跳出对话循环，关闭当前客户端连接，
+        然后等待另一个客户端连接'''
+        if not data:
+            break
+
+        '''如果得到了客户端发送的消息，就将其格式化并
+        返回相同的数据，但是会在这些数据中加上当前时间戳
+        的前缀
+        ''' 
+        print(data)
+        tcpCliSock.send(('[%s] %s' % (\
+                   ctime(), data)).encode())
+
+    tcpCliSock.close()
+
+# 在实际情况中，最后一行永远不会被执行，只是提醒大家，考虑一个更加优雅的方式退出 
+tcpSerSock.close()
+
+
+
+　　　　　　　　
+　　　
+
+
+
