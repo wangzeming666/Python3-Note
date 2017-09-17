@@ -1,0 +1,182 @@
+这部分笔记本不需要整理，因为书中的语言很精炼，翻书即可。
+但还是附上一份
+
+
+
+
+1. time.sleep()函数
+使用time.sleep()函数来演示线程是如何工作的
+time.sleep（）函数需要一个浮点型的参数，
+以这个给定的秒数进行“睡眠”，也就是，程序的
+执行会暂时停止的时间
+
+2. python的threading模块
+A. _thread: 提供基本的线程和锁定支持，注意：避免
+B. threading: 提供了更高级别，功能更全的线程管理，
+   包括非常好用的同步机制，还可同步数据结构，比如
+   锁对象
+
+3. threading模块里的Thread类
+    三种创建方法
+    3.1 方法一：传给它一个函数
+        join():
+        此方法将等待线程结束，
+        或者在提供了超时时间的情况下，终止。
+        这种锁也成为自旋锁。
+        一旦线程启动，他们就会一直执行，知道
+        给定的函数完成以后退出。
+        如果主线程还有其他的事情要做，而不是
+        等待这些子线程完成，就可以不用调用join().
+                thread_2.py
+
+        3.2. 方法二：传给它一个可调用的类实例
+                thread_3.py
+
+        3.3. 方法三：派生Thread的子类，并创建子类的实例
+               myThread.py
+               thread_4.py
+
+        run(): 定义线程功能的方法, 通常在子类中被重写
+
+4. 单线程和多线程执行对比
+    multi.py
+    
+    
+1. queue模块的类
+1.1 Queue(maxsize=0)
+创建一个先入先出队列。如果给定最大值，则在队列没有空间时堵塞；否则，为无限队列
+1.2 PriorityQueue(maxsize=0)
+创建一个优先级队列
+
+2.queue的异常
+2.1 empty: 当对一个空的队列条用get()方法时，而此时的队列里没有任何元素
+2.2 full：当队列中的元素个数已经达到最大值maxsize时，继续调用put()方法时
+
+3. queue对象方法
+3.1. qsize(): 返回队列大小（由于返回时队列小大可能被其他线程修改，所以该值为近似值）
+3.2. empty(): 空队列返回True
+3.3. full(): 队列已满返回True
+3.4. put(item, block=True, timeout=None)：将item放入队列，如果block为True且timeout为None, 则在有用空间之前阻塞。如果timeout为正值，则最多阻塞timeout秒。
+
+timeout: 超时
+empty: 空
+full: 满
+block: 堵塞
+
+3.5. get(block=True, timeout=None): 从队列中取得元素。如果给定了block(非0)，则一直堵塞到有可用的元素为止。
+
+3.6. task_done(): 用于表示队列中某个元素已经被执行完成，该方法会被join()使用
+task: 任务
+done: 完成
+
+3.7. join(): 在队列中所有元素执行完毕并调用上面的task_done()信号之前，保持阻塞
+
+4. 多线程使用于I/O密集型应用，而不是计算密集型应用。对于后一种情况，为了实现更好的并行性能，需要使用多进程，
+I：input输入，writer
+O: output输出，reader
+
+5. multiprocessing模块
+作用：为在子进程中运行任务，信息和共享数据，以及执行各种形式的同步提供支持
+
+process类：表示运行在一个子进程中的任务
+process([group [, target [, name [, args [, kargs]]]]])
+注意：args是传给target位置参数的元组
+如果args只有一个参数：(参数, )
+如果args有多个参数：(参数1，参数2，...， 参数N)
+
+process类的实例具有以下方法和属性
+p.is_alive(): 如果p依然运行，返回True
+p.join([timeout]): 等待进程p终止
+p.run(): 进程启动时运行的方法。默认情况下，调用传递给Process构造函数的target. 另一种情况，重新实现run()函数。
+p.start()：启动进程。将运行代表进程的子进程，并且，调用该子进程中的p.run()函数。
+
+p.terminate(): 强制终止进程。进程p将被立即终止，同时，不会进行任何清理动作。如果进程p创建了她自己的子进程，这些进行将变为僵尸进程，使用此法要格外小心。
+
+p.authkey: 这个键的用途是为设计网络连接的底层进程间通信提供安全性，这类连接只有在两端具体相同的身份验证键时才能成功
+
+p.daemon: 布尔标志，指示进程是否是后台进程。当创建它的python进程终止时，后台进程将自动终止。其值必须在使用p.start()函数启动进程之前进行设置。
+
+p.exitcode: 进程的整数退出代码，如果进程仍然在运行，它的值为None.
+
+p.name: 进程的名称
+p.pid: 进程的整数ID
+
+
+JoinableQueue([maxsize]):
+创建可连接的共享进程队列，但，队列允许项的消费者通知生产者项已经被成功处理
+
+JoinableQueue的实例p除了与Queue对象相同的方法外，还有以下方法：
+
+q.task_done()：消费者使用此方法发出信号，表示q.get()返回的项已经被处理。如果调用此方法的次数大于从队列中删除的项的数量，将引发ValueError异常。
+
+q.join(): 生产者使用此方法进行阻塞，直到队列中的所有项均被处理。阻塞将持续到为队列中的每个项均调用q.task_done（）方法为止
+
+
+
+multiprocessing模块内的类：
+Process类：子进程, 也有一个方法叫join()
+
+Queue类：队列：先入先出
+JoinableQueue类: 可连接的队列：特殊性在于：task_done()
+join()
+多进程处理的一般建议：
+永远要记住一点，当我们启动一个进程process时候，往队列queue里存放项item后，这个进程永远要等待该队列中的所有项都被用完，然后这个进程再终止
+
+*********************************
+套接字(socket)网络编程
+1. 什么是套接字？
+它是计算机网络数据结构，体现了“”通信端点“”的概念。
+
+在任何类型的通信开始之前，网络应用程序必须创建套接字。
+（类似电话插孔，电源的插座）
+
+进程间通信：套接字最初是为同一主机上的应用程序所创建的，使得主机上运行的一个程序（又叫一个进程）与另一个运行的程序进行通信
+
+套接字地址（网络地址） = 主机名 + 端口号
+主机本地机：localhost, 127.0.0.1 (IP地址)
+mysql -u root -p123456 localhost 36
+
+面向连接的套接字使用的传输控制协议是：TCP
+因特网协议：IP
+面向连接的套接字(AF_INET)的网络版本使用因特网协议(IP)来搜寻网络中的主机，所以整个系统通常结合这两种协议(TCP和IP)来进行
+
+无连接的套接字使用的协议是用户数据报协议(UDP)
+
+Python中的网络编程
+socket模块
+socket()函数：创建套接字对象
+
+要创建套接字，必须使用socket.socket()函数，它的一般语法如下：
+socket.socket(socket_family, socket_type, protocol=0)
+
+其中，socket_family套接字家族：AF_UNIX(基于文件的)或AF_INET(基于网络的)
+
+socket_type套接字类型：SOCK_STREAM（面向连接的）或SOCK_DGRAM（无连接的）
+
+protocol通常省略，默认为0
+
+创建了一个TCP/IP的套接字：
+tcpSock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+创建UDP/IP的套接字：
+udpSock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+简单方式：
+from socket import *      
+把socket模块中的属性引入到了命名空间，大大缩短代码
+tcpSock = socket(AF_INET, SOCK_STREAM)
+
+创建TCP服务器
+ss = socket()  #创建服务器套接字
+ss.bind()       #套接字与地址绑定
+ss.listen()     #监听连接
+inf_loop:     #服务器无限循环
+    cs = ss.accept()   #接收客户端连接
+    comm_loop:        #通讯循环
+         cs.recv()/cs.send()  #对话（接收或者发送）
+    cs.close()      #关闭客户端套接字
+ss.close()          #关闭服务器套接字(可选)
+
+
+
+
