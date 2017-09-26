@@ -1,0 +1,131 @@
+
+Python的collections中有一个deque,这个对象类似于list列表，不过你可以操作它的“两端”。比如下面的例子：
+
+ 
+
+[python] view plaincopyprint?
+import collections  
+d=collections.deque('abcdefg')  
+print 'Deque:',d  
+print 'Length:',len(d)  
+print 'Left end:',d[0]  
+print 'Right end:',d[-1]  
+  
+d.remove('c')  
+print 'remove(c):',d  
+下面是输出的结果，从结果看好像似乎和普通的list没有多大区别：
+ 
+
+ 
+
+[plain] view plaincopyprint?
+Deque: deque(['a', 'b', 'c', 'd', 'e', 'f', 'g'])  
+Length: 7  
+Left end: a  
+Right end: g  
+remove(c): deque(['a', 'b', 'd', 'e', 'f', 'g'])  
+不过，下面的例子就可以看到，deque是通过extend方法初始化集合元素的，同时你可以通过extendleft将结合元素从“左边”加入到集合中：
+ 
+
+ 
+
+[python] view plaincopyprint?
+import collections  
+d1=collections.deque()  
+d1.extend('abcdefg')  
+print 'extend:',d1  
+d1.append('h')  
+print 'append:',d1  
+# add to left   
+d2=collections.deque()  
+d2.extendleft(xrange(6))  
+print 'extendleft:',d2  
+d2.appendleft(6)  
+print 'appendleft:',d2  
+从输出的结果，我们可以看到，append默认从集合的右边增加数组元素，而另一个appendleft可以从集合的左边增加元素，输出结果如下：
+ 
+
+ 
+
+[plain] view plaincopyprint?
+extend: deque(['a', 'b', 'c', 'd', 'e', 'f', 'g'])  
+append: deque(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'])  
+extendleft: deque([5, 4, 3, 2, 1, 0])  
+appendleft: deque([6, 5, 4, 3, 2, 1, 0])  
+与append和appendleft方法对应的还有pop和popleft方法分别用于从集合中取出元素，看下面的例子:
+ 
+
+ 
+
+[python] view plaincopyprint?
+import collections  
+print "From the right"  
+d=collections.deque('abcdefg')  
+while True:  
+    try:  
+        print d.pop(),  
+    except IndexError:  
+        break  
+print  
+  
+print '\n From the left'  
+d=collections.deque(xrange(6))  
+while True:  
+    try:  
+        print d.popleft(),  
+    except IndexError:  
+        break  
+print  
+其输出结果为：
+ 
+
+ 
+
+[plain] view plaincopyprint?
+From the right  
+g f e d c b a  
+  
+ From the left  
+0 1 2 3 4 5  
+最后值得一提的是，deque是线程安全的，也就是说你可以同时从deque集合的左边和右边进行操作而不会有影响，看下面的代码：
+ 
+
+ 
+
+[python] view plaincopyprint?
+import collections  
+import threading  
+import time  
+candle=collections.deque(xrange(5))  
+def burn(direction,nextSource):  
+    while True:  
+        try:  
+            next=nextSource()  
+        except IndexError:  
+            break  
+        else:  
+            print '%s : %s' % (direction,next)  
+            time.sleep(0.1)  
+    print "done %s" % direction  
+    return  
+left=threading.Thread(target=burn,args=('left',candle.popleft))  
+right=threading.Thread(target=burn,args=('right',candle.pop))  
+  
+left.start()  
+right.start()  
+  
+left.join()  
+right.join()  
+为了试验线程安全，我们分别起了两个线程从deque的左边和右边开始移出集合元素，其输出结果如下：
+ 
+
+ 
+
+[plain] view plaincopyprint?
+left : 0  
+right : 4  
+right : 3left : 1  
+  
+left : 2  
+done right  
+done left  
