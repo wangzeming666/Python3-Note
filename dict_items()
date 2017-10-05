@@ -1,0 +1,7 @@
+dict.keys(), dict.values() and dict.items() are view objects. 
+
+
+Python字典items()方法用于返回字典dict的(key，value)元组对的列表
+>>> dict = {'Name': 'Maxsu', 'Age': 27}
+>>> print("Value : %s" %  dict.items())
+Value : [('Age', 27), ('Name', 'Maxsu')]
