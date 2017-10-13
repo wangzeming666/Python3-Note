@@ -1,0 +1,27 @@
+之前找东西都在文档library reference 里面找，才发现language reference 里面内容一样十分重要和有用
+
+6.2.9.1. 生成器迭代器方法
+本小节描述了生成器迭代器的方法。它们可以用于控制生成器函数的执行。
+
+注意，当生成器已经执行时，调用下面的任何生成器方法引发ValueError异常。
+
+generator.__next__()
+开始执行生成器函数或在最后执行的yield表达式恢复它。当使用__next__()方法恢复生成器函数时，当前yield表达式总是计算为None。
+然后执行继续到下一个yield表达式，其中生成器再次挂起，并且expression_list的值返回到__next__()的调用者。
+如果生成器退出而不产生另一个值，则会引发StopIteration异常。
+
+该方法通常被隐式地调用，例如通过for循环，或者通过内置的next()函数。
+
+generator.send(value)
+恢复执行并将值“发送”到生成器函数中。value参数成为当前yield表达式的结果。
+如果生成器退出而不产生另一个值，则send()方法返回由生成器产生的下一个值，或者引发StopIteration。
+当调用send()来启动生成器时，必须使用None作为参数来调用它，因为没有可以接收该值的yield表达式。
+
+generator.throw(type[, value[, traceback]])
+在生成器暂停的点处引发type类型的异常，并返回由生成器函数产生的下一个值。如果生成器退出而不产生另一个值，则会引发StopIteration异常。
+如果生成器函数没有捕获传入的异常，或引发不同的异常，那么该异常传播到调用者。
+
+generator.close()
+在生成器函数暂停的点处引发GeneratorExit。如果生成器函数然后正常退出、已经关闭或引发GeneratorExit（通过不捕获异常），close将返回其调用者。
+如果生成器产生一个值，则会引发RuntimeError。如果生成器引发任何其他异常，则将其传播给调用者。
+如果生成器由于异常或正常退出而已经退出，close()不会执行任何操作。
