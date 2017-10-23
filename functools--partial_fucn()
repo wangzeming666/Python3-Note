@@ -1,0 +1,53 @@
+说说Python中的一个宝库functools中的一个函数——partial。
+
+partial ，单词的意思是“局部的，部分的”。单看这个词可能有些模糊，但是加上前面的functools，会不会有些明白？那个穿白衣服的同学，你来回答。你说不知道？
+
+先来看下functools的定义:
+
+
+
+The functools module is for higher-order functions: functions that act on or return other functions. 
+In general, any callable object can be treated as a function for the purposes of this module.
+中文大意是:
+
+
+
+functools这货用于高阶函数：指那些作用于函数或者返回其他函数的函数。通常情况下，只要是可以被当做函数调用的对象就是这个模块的目标。
+
+在python中都有那些东西可以被当做函数来调用呢？
+
+有了上面的定义，应该大体知道， partial 这个东西是针对函数起作用的，并且是部分的，函数中哪些东西可以拆成部分呢？那个白衣服的同学。
+【小白：类似于装饰器吗。博主：你出去。】
+
+好了，咱们继续，装饰器是对函数进行包装，算是对函数的整体进行处理（其实是对输入和输出）。部分的话其实只有对参数进行部分处理了。
+怎么部分处理的呢？看个场景就明白了。
+
+场景：有这样的函数：get_useragent(request) 用来获取用户浏览器的ua信息，但是这个函数又不是在主体函数(执行页面渲染的函数）get时调用的，
+只在模板中的一个filter中调用的（可以理解是在模板渲染时调用的),而filter在执行的时候是不能添加参数的，哪你要怎么处理。
+
+这时partial就得闪亮登场了，代码时间到:
+
+
+#省略上下文
+def get(self, request, *args, **kwargs):
+    context = {
+        'ua_filter': functools.partial(get_useragent, **{"request": request})
+    }
+    self.render('index.html', context)
+
+
+/* 对应的大致页面代码如下 */
+user-agent: {% ua_filter %}
+这样的例子不知道是否够清楚，函数的大致意思就是提前给函数绑定几个参数。
+
+不考虑场景的例子是这样的:
+
+
+def say(name, age):
+    print name, age
+ 
+func = functools.partial(say, age=5)
+func('the5fire')
+ 
+# 结果是： the5fire 5
+就这样，随便写篇，以示存在。
