@@ -3,3 +3,21 @@ sys - 系统特定的参数和函数
 sys.argv
 传递给Python脚本的命令行参数列表。argv[0]是脚本的名称（是否是完整的路径名这要取决于操作系统）。
 如果使用解释器的-c命令行选项执行命令，则argv[0]设置为字符串'-c'如果无脚本名称传递给 Python 解释器， argv[0]是空字符串。
+
+用一个实例来解释
+
+#!/usr/bin/python
+# Filename: using_sys.py
+
+import sys
+
+print 'The command line arguments are:'
+for i in sys.argv:
+    print i
+
+print '\n\nThe PYTHONPATH is', sys.path, '\n'
+
+
+然后我们再看调用脚本的命令行：python using_sys.py we are argumentspython就不用说了，
+「using_sys.py」脚本名，后面的用空格分割开的「we」「are」「argument」就是参数了。
+PS.一般参数由空格分隔，如果参数内部有空格要使用英文双引号引起来比如这样：python using_sys.py hi "I'm 7sDream"
