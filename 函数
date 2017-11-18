@@ -1,0 +1,158 @@
+like print函数为内置函数
+
+def make(something):
+  do_something = something
+  print(something, ‘制作完成')
+
+演示执行
+
+函数，蓝图，模型
+
+而函数定义定义了用户自定义的函数对象(对象的概念在标准类型级)
+
+def关键字用以定义声明一个函数，所有的函数定义都需要一个def关键字
+
+参数介绍，形式参数和实际参数，按位置传递
+# part是部分的意思，part1为部分一
+part1 = '门板'
+part2 = '门镜'
+part3 = '门锁'
+part4 = '门把手'
+
+# 定义展示零件(showParts)函数
+def showParts(a, b, c, d):
+  print(a, b, c, d)
+
+# 执行showParts函数
+showPart(part1, part2, part3, part4)
+
+函数定义是可执行语句。
+
+函数定义不执行函数体；这只有当函数被调用时才被执行。
+
+#### 尝试不写形式参数，调用全局变量，引出命名空间的概念。
+
+举例说明：
+
+part1 = '门板'
+part2 = '门镜'
+part3 = '门锁'
+part4 = '门把手'
+
+def make_a_door():
+  if part1 and part2 and part3 and part4:
+    door = '%s, %s, %s, %s' % (part1, part2, part3, part4)
+    print(door)
+    print('门已经做好了，快发工资')
+  else:
+    print('缺少零件，门做不了，下班回家')
+
+运行缺少part的函数，显示else结果，解释全局变量
+
+part1 = '门板'
+part2 = '门镜'
+part4 = '门把手'
+
+def make_a_door():
+  if part1 and part2 and part3 and part4:
+    door = '%s, %s, %s, %s' % (part1, part2, part3, part4)
+    print(door)
+    print('门已经做好了，快发工资')
+  else:
+    print('缺少零件，门做不了，下班回家')
+    
+ 
+
+在函数内部添加缺少的part，显示结果，解释局部变量
+part1 = '门板'
+part2 = '门镜'
+part4 = '门把手'
+
+def make_a_door():
+  # 工人着急赚钱，从兜里掏出一个门锁，没有使用工厂提供的门锁。
+  part3 = '门锁'
+  if part1 and part2 and part3 and part4:
+    print('门已经做好了，快发工资')
+  else:
+    print('缺少零件，门做不了，下班回家')
+
+
+# 工人喝酒喝多了，从兜里掏出来一根火腿当成门锁装进了门里
+part1 = '门板'
+part2 = '门镜'
+part3 = '门锁'
+part4 = '门把手'
+
+def make_a_door():
+  part4 = '火腿'
+  if part1 and part2 and part3 and part4:
+    door = '%s, %s, %s, %s' % (part1, part2, part3, part4)
+    print(door)
+    print('门已经做好了，快发工资')
+  else:
+    print('缺少零件，门做不了，下班回家')
+
+解释局部变量对全局变量的覆盖
+
+
+工人做好了，要上交成品，引出return，来返回函数的返回值
+
+part1 = '门板'
+part2 = '门镜'
+part3 = '门锁'
+part4 = '门把手'
+
+def make_a_door():
+  if part1 and part2 and part3 and part4:
+    door = '%s, %s, %s, %s' % (part1, part2, part3, part4)
+  return door
+
+result = make_a_door()
+print(result)
+
+
+展示未返回的错误结果
+
+part1 = '门板'
+part2 = '门镜'
+part3 = '门锁'
+part4 = '门把手'
+
+def make_a_door():
+  if part1 and part2 and part3 and part4:
+    door = '%s, %s, %s, %s' % (part1, part2, part3, part4)
+
+result = make_a_door()
+print(result)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+函数定义可以由一个或多个装饰器表达式包装。装饰器表达式是在函数定义时，在包含函数定义的作用域中的计算。
+结果必须是可调用的，它以函数对象作为唯一的参数来调用。返回的值绑定到函数名称而不是函数对象。多个装饰器以嵌套方式应用。例如，下面的代码
+
+@f1(arg)
+@f2
+def func(): pass
+
+大致相当于
+
+def func(): pass
+func = f1(arg)(f2(func))
+
+除了原始函数不临时绑定到名称func。
