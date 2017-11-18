@@ -6,6 +6,8 @@ sys.argv
 
 用一个实例来解释
 
+写一个文件
+
 #!/usr/bin/python
 # Filename: using_sys.py
 
@@ -17,7 +19,23 @@ for i in sys.argv:
 
 print '\n\nThe PYTHONPATH is', sys.path, '\n'
 
+保存
 
 然后我们再看调用脚本的命令行：python using_sys.py we are argumentspython就不用说了，
 「using_sys.py」脚本名，后面的用空格分割开的「we」「are」「argument」就是参数了。
 PS.一般参数由空格分隔，如果参数内部有空格要使用英文双引号引起来比如这样：python using_sys.py hi "I'm 7sDream"
+
+结果如下：
+
+wangzeming@wangzeming:~$ python3 using_sys.py hi "I'm wangzeming"
+The conmand line arguments are:
+using_sys.py
+hi
+I'm wangzeming
+
+
+The PYTHONPATH is ['/home/wangzeming', '/usr/lib/python35.zip', '/usr/lib/python3.5', 
+'/usr/lib/python3.5/plat-x86_64-linux-gnu', '/usr/lib/python3.5/lib-dynload', 
+'/usr/local/lib/python3.5/dist-packages', '/usr/lib/python3/dist-packages'] 
+
+wangzeming@wangzeing:~$
