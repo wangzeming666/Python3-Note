@@ -1,0 +1,109 @@
+容易忽略的放在前面
+服务器可能会设置一些socket选项（这是可选的，上面的代码就设置了，为了在杀死或重启服务器后，立马就能再次重用相同的地址）。
+Python
+listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+
+服务器建立连接的步骤
+
+    服务器创建一个TCP/IP socket。在Python里使用下面的语句即可：
+    Python
+    listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    
+    	
+    listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    然后，服务器绑定指定地址，bind函数分配一个本地地址给socket。在TCP中，调用bind可以指定一个端口号，一个IP地址，两者都，或者两者都不指定。
+    Python
+    listen_socket.bind(SERVER_ADDRESS)
+
+
+    然后，服务器让这个socket成为监听socket。
+    Python
+    listen_socket.listen(REQUEST_QUEUE_SIZE)
+ 
+
+    listen方法只会被服务器调用。它告诉内核它要接受这个socket上的到来的连接请求了。
+
+做完这些后，服务器开始循环地一次接受一个客户端连接。当有连接到达时，aceept调用返回已连接的客户端socket。
+然后，服务器从这个socket读取请求数据，在标准输出上把数据打印出来，并回发一个消息给客户端。然后，服务器关闭客户端连接，准备好再次接受新的客户端连接。
+
+
+以下是客户端连接服务器，发送请求并打印响应的示例代码：
+ import socket
+
+ # create a socket and connect to a server
+ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+ sock.connect(('localhost', 8888))
+
+ # send and receive some data
+ sock.sendall(b'test')
+ data = sock.recv(1024)
+ print(data.decode())
+ 
+ 
+创建socket后，客户端需要连接服务器。这是通过connect调用做到的：
+sock.connect(('localhost', 8888))
+
+客户端仅需提供要连接的远程IP地址或主机名和远程端口号即可。
+
+可能你注意到了，客户端不用调用bind和accept。客户端没必要调用bind，是因为客户端不关心本地IP地址和本地端口号。当客户端调用connect时内核的
+TCP/IP栈自动分配一个本地IP址地和本地端口。本地端口被称为暂时端口（ ephemeral port），也就是，short-lived 端口。
+
+服务器上标识着一个客户端连接的众所周知的服务的端口被称为well-known端口（举例来说，80就是HTTP，22就是SSH）。操起Python shell，
+创建个连接到本地服务器的客户端连接，看看内核分配给你创建的socket的暂时的端口是多少（在这之前启动webserver3a.py或webserver3b.py）：
+
+# 交互式服务器 - webserver3.py
+#
+# Python 3.4 on Ubuntu 16.04
+
+import socket
+
+import time
+
+SERVER_ADDRESS = (HOST, PORT) = '', 8000
+REQUEST_QUEUE_SIZE = 5
+
+
+def handle_request(client_connection):
+    request = client_connection.recv(1024)
+    print(request.decode())
+    http_response = b'''
+    HTTP/1.1 200 OK
+
+    Hello, World!
+    '''
+    client_connection.sendall(http_response)
+    time.sleep(10)
+
+
+def server_forever():
+    listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listen_socket.bind(SERVER_ADDRESS)
+    listen_socket.listen(REQUEST_QUEUE_SIZE)
+    print('Serving HTTP on port {port} ...'.format(port=PORT))
+
+    while True:
+        client_connection, client_address = listen_socket.accept()
+        handle_request(client_connection)
+        client_connection.close()
+
+
+if __name__ == '__main__':
+    server_forever()
+
+终端命令：
+
+>>> import socket
+>>> sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+>>> sock.connect(('localhost', 8888))
+>>> host, port = sock.getsockname()[:2]
+>>> host, port
+('127.0.0.1', 60589)
+
+上面这个例子中，内核分配了60589这个暂时端口。
+
+在我开始回答第二部分提出的问题前，我需要快速讲一下几个重要的概念。你很快就知道为什么重要了。两个概念是进程和文件描述符。
+
+什么是进程？进程就是一个正在运行的程序的实例。比如，当服务器代码执行时，它被加载进内存，运行起来的程序实例被称为进程。
+内核记录了进程的一堆信息用于跟踪，进程ID就是一个例子。当你运行服务器 webserver3a.py 或 webserver3b.py 时，你就在运行一个进程了。
