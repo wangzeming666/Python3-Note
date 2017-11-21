@@ -107,3 +107,72 @@ if __name__ == '__main__':
 
 什么是进程？进程就是一个正在运行的程序的实例。比如，当服务器代码执行时，它被加载进内存，运行起来的程序实例被称为进程。
 内核记录了进程的一堆信息用于跟踪，进程ID就是一个例子。当你运行服务器 webserver3a.py 或 webserver3b.py 时，你就在运行一个进程了。
+
+在控制台窗口运行webserver3b.py：
+
+在别的控制台窗口使用ps命令获取这个进程的信息：
+(注意这里的ps命令ubuntu测试失败，可通过查看PID看到进程的信息，下文有提及。)
+$ ps | grep webserver3b | grep -v grep
+7182 ttys003    0:00.04 python webserver3b.py
+
+ps命令表示你确实运行了一个Python进程webserver3b。进程创建时，内核分配给它一个进程ID，也就是 PID。
+在UNIX里，每个用户进程都有个父进程，父进程也有它自己的进程ID，叫做父进程ID，或者简称PPID。
+假设默认你是在BASH shell里运行的服务器，那新进程的父进程ID就是BASH shell的进程ID。
+
+自己试试，看看它是怎么工作的。再启动Python shell，这将创建一个新进程，
+使用 os.getpid() 和 os.getppid() 系统调用获取Python shell进程的ID和父进程ID（BASH shell的PID）。
+然后，在另一个控制台窗口运行ps命令，使用grep查找PPID(父进程ID，我的是3148)。
+
+另一个要了解的重要概念是文件描述符。那么什么是文件描述符呢？文件描述符是当打开一个存在的文件，创建一个文件，或者创建一个socket时，
+内核返回的非负整数。你可能已经听过啦，在UNIX里一切皆文件。内核使用文件描述符来追踪进程打开的文件。当你需要读或写文件时，你就用文件描述符标识它好啦。
+Python给你包装成更高级别的对象来处理文件（和socket），你不必直接使用文件描述符来标识一个文件，但是，在底层，UNIX中是这样标识文件和socket的：
+通过它们的整数文件描述符。
+
+默认情况下，UNIX shell分配文件描述符0给进程的标准输入，文件描述符1给进程的标准输出，文件描述符2给标准错误。
+就像我前面说的，虽然Python给了你更高级别的文件或者类文件的对象，你仍然可以使用对象的fileno()方法来获取对应的文件描述符。
+回到Python shell来看看怎么做：
+>>> import sys
+>>> sys.stdin
+<open file '<stdin>', mode 'r' at 0x102beb0c0>
+>>> sys.stdin.fileno()
+0
+>>> sys.stdout.fileno()
+1
+>>> sys.stderr.fileno()
+2
+
+虽然在Python中处理文件和socket，通常使用高级的文件/socket对象，但有时候你需要直接使用文件描述符。
+下面这个例子告诉你如何使用write系统调用写一个字符串到标准输出，write使用整数文件描述符做为参数：
+>>> import sys
+>>> import os
+>>> res = os.write(sys.stdout.fileno(), 'hellon')
+hello
+
+有趣的是——应该不会惊讶到你啦，因为你已经知道在UNIX里一切皆文件——socket也有一个分配给它的文件描述符。
+再说一遍，当你创建一个socket时，你得到的是一个对象而不是非负整数，但你也可以使用我前面提到的fileno()方法直接访问socket的文件描述符。
+
+还有一件事我想说下：你注意到了吗？在第二个例子webserver3b.py中，当服务器进程在60秒的睡眠时你仍然可以用curl命令来连接。
+当然啦，curl没有立刻输出什么，它只是在那挂起。但为什么服务器不接受连接，客户端也不立刻被拒绝，而是能连接服务器呢？
+答案就是socket对象的listen方法和它的BACKLOG参数，我称它为 REQUEST_QUEUE_SIZE(请求队列长度)。
+BACKLOG参数决定了内核为进入的连接请求准备的队列长度。
+当服务器webser3b.py睡眠时，第二个curl命令可以连接到服务器，因为内核在服务器socket的进入连接请求队列上有足够的可用空间。
+
+然而增加BACKLOG参数不会神奇地让服务器同时处理多个客户端请求，设置一个合理大点的backlog参数挺重要的，这样accept调用就不用等新连接建立起来，
+立刻就能从队列里获取新的连接，然后开始处理客户端请求啦。
+
+吼吼！你已经了解了非常多的背景知识啦。咱们快速简要重述到目前为止你都学了什么（如果你都知道啦就温习一下吧）。
+
+
+    迭代服务器
+    服务器socket创建流程（socket, bind, listen, accept）
+    客户端连接创建流程（socket, connect）
+    socket对
+    socket
+    临时端口和众所周知端口
+    进程
+    进程ID（PID），父进程ID（PPID），父子关系。
+    文件描述符
+    listen方法的BACKLOG参数的意义
+
+现在我准备回答第二部分问题的答案了：“怎样才能让服务器同时处理多个请求？”或者换句话说，“怎样写一个并发服务器？”
+
