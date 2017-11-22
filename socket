@@ -272,4 +272,222 @@ listen_socket.close()  # close child copy
     内核使用描述符引用计数来决定是否关闭文件/socket。
     服务器父进程的角色是：现在它干的所有活就是接受一个新连接，fork一个子进来来处理这个请求，然后循环接受新连接。
 
-咱们来看看，如果在父进程和子进程中你不关闭复制的socket描述符会发生什么吧。以下是个修改后的版本，服务器不关闭复制的描述符，webserver3d.py：
+咱们来看看###########################################################################
+# Concurrent server - webserver3d.py                                      #
+#                                                                         #
+# Tested with Python 2.7.9 & Python 3.4 on Ubuntu 14.04 & Mac OS X        #
+###########################################################################
+import os
+import socket
+
+SERVER_ADDRESS = (HOST, PORT) = '', 8888
+REQUEST_QUEUE_SIZE = 5
+
+def handle_request(client_connection):
+    request = client_connection.recv(1024)
+    http_response = b"""
+HTTP/1.1 200 OK
+
+Hello, World!
+"""
+    client_connection.sendall(http_response)
+
+def serve_forever():
+    listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listen_socket.bind(SERVER_ADDRESS)
+    listen_socket.listen(REQUEST_QUEUE_SIZE)
+    print('Serving HTTP on port {port} ...'.format(port=PORT))
+
+    clients = []
+    while True:
+        client_connection, client_address = listen_socket.accept()
+        # store the reference otherwise it's garbage collected
+        # on the next loop run
+        clients.append(client_connection)
+        pid = os.fork()
+        if pid == 0:  # child
+            listen_socket.close()  # close child copy
+            handle_request(client_connection)
+            client_connection.close()
+            os._exit(0)  # child exits here
+        else:  # parent
+            # client_connection.close()
+            print(len(clients))
+
+if __name__ == '__main__':
+    serve_forever()
+    
+，如果在父进程和子进程中你不关闭复制的socket描述符会发生什么吧。以下是个修改后的版本，服务器不关闭复制的描述符，webserver3d.py：
+###########################################################################
+# Concurrent server - webserver3d.py                                      #
+#                                                                         #
+# Tested with Python 2.7.9 & Python 3.4 on Ubuntu 14.04 & Mac OS X        #
+###########################################################################
+import os
+import socket
+
+SERVER_ADDRESS = (HOST, PORT) = '', 8888
+REQUEST_QUEUE_SIZE = 5
+
+def handle_request(client_connection):
+    request = client_connection.recv(1024)
+    http_response = b"""
+HTTP/1.1 200 OK
+
+Hello, World!
+"""
+    client_connection.sendall(http_response)
+
+def serve_forever():
+    listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listen_socket.bind(SERVER_ADDRESS)
+    listen_socket.listen(REQUEST_QUEUE_SIZE)
+    print('Serving HTTP on port {port} ...'.format(port=PORT))
+
+    clients = []
+    while True:
+        client_connection, client_address = listen_socket.accept()
+        # store the reference otherwise it's garbage collected
+        # on the next loop run
+        clients.append(client_connection)
+        pid = os.fork()
+        if pid == 0:  # child
+            listen_socket.close()  # close child copy
+            handle_request(client_connection)
+            client_connection.close()
+            os._exit(0)  # child exits here
+        else:  # parent
+            # client_connection.close()
+            print(len(clients))
+
+if __name__ == '__main__':
+    serve_forever()
+    
+启动服务器
+
+使用curl去连接服务器：
+$ curl http://localhost:8888/hello
+Hello, World!
+
+好的，curl打印出来并发服务器的响应，但是它不终止，一直挂起。发生了什么？服务器不再睡眠60秒了：
+它的子进程开心地处理了客户端请求，关闭了客户端连接然后退出啦，但是客户端curl仍然不终止。
+
+那么，为什么curl不终止呢？原因就在于复制的文件描述符。当子进程关闭了客户端连接，内核减少引用计数，值变成了1。
+服务器子进程退出，但是客户端socket没有被内核关闭掉，因为引用计数不是0啊，所以，结果就是，
+终止数据包（在TCP/IP说法中叫做FIN）没有发送给客户端，所以客户端就保持在线啦。这里还有个问题，如果服务器不关闭复制的文件描述符然后长时间运行，
+最终会耗尽可用文件描述符。
+
+使用Control-C停止webserver3d.py，使用shell内建的命令ulimit检查一下shell默认设置的进程可用资源：
+
+看到上面的了咩，我的Ubuntu上，进程的最大可打开文件描述符是1024。
+
+现在咱们看看怎么让服务器耗尽可用文件描述符。在已存在或新的控制台窗口，调用服务器最大可打开文件描述符为256:
+
+$ ulimit -n 256
+
+在同一个控制台上启动webserver3d.py
+
+使用下面的client3.py客户端来测试服务器
+#####################################################################
+# Test client - client3.py                                          #
+#                                                                   #
+# Tested with Python 2.7.9 & Python 3.4 on Ubuntu 14.04 & Mac OS X  #
+#####################################################################
+import argparse
+import errno
+import os
+import socket
+
+SERVER_ADDRESS = 'localhost', 8888
+REQUEST = b"""
+GET /hello HTTP/1.1
+Host: localhost:8888
+
+"""
+
+def main(max_clients, max_conns):
+    socks = []
+    for client_num in range(max_clients):
+        pid = os.fork()
+        if pid == 0:
+            for connection_num in range(max_conns):
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.connect(SERVER_ADDRESS)
+                sock.sendall(REQUEST)
+                socks.append(sock)
+                print(connection_num)
+                os._exit(0)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Test client for LSBAWS.',
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        '--max-conns',
+        type=int,
+        default=1024,
+        help='Maximum number of connections per client.'
+    )
+    parser.add_argument(
+        '--max-clients',
+        type=int,
+        default=1,
+        help='Maximum number of clients.'
+    )
+    args = parser.parse_args()
+    main(args.max_clients, args.max_conns)
+    
+在新的控制台窗口里，启动client3.py，让它创建300个连接同时连接服务器。
+$ python client3.py --max-clients=300
+
+很快服务器就崩了。下面是我电脑上抛出的异常
+socket.error: [Error 24] Too many open files
+
+教训非常明显啦——服务器应该关闭复制的描述符。但即使关闭了复制的描述符，你还没有接触到底层，因为你的服务器还有个问题，僵尸！
+
+是哒，服务器代码就是产生了僵尸。咱们看下是怎么产生的。再次运行服务器
+
+在另一个控制台窗口运行下面的curl命令
+$ curl http://localhost:8888/hello
+
+现在运行ps命令，显示运行着的Python进程。以下是我的Ubuntu电脑上的ps输出
+$ ps auxw | grep -i python | grep -v grep
+vagrant   9099  0.0  1.2  31804  6256 pts/0    S+   16:33   0:00 python webserver3d.py
+vagrant   9102  0.0  0.0      0     0 pts/0    Z+   16:33   0:00 [python] &lt;defunct&gt;
+
+你看到上面第二行了咩？它说PId为9102的进程的状态是Z+，进程的名称是。这个就是僵尸啦。僵尸的问题在于，你杀死不了他们啊。
+
+即使你试着用 $ kill -9 来杀死僵尸，它们还是会幸存下来哒，自己试试看看。
+
+僵尸到底是什么呢？为什么咱们的服务器会产生它们呢？僵尸就是一个进程终止了，但是它的父进程没有等它，还没有接收到它的终止状态。
+当一个子进程比父进程先终止，内核把子进程转成僵尸，存储进程的一些信息，等着它的父进程以后获取。存储的信息通常就是进程ID，进程终止状态，进程使用的资源。
+嗯，僵尸还是有用的，但如果服务器不好好处理这些僵尸，系统就会越来越堵塞。咱们看看怎么做到的。首先停止服务器，然后新开一个控制台窗口
+，使用ulimit命令设置最大用户进程为1000（确保设置打开文件更高，比如500吧）：
+$ ulimit -u 1000
+$ ulimit -n 500
+
+在同一个控制台窗口运行webserver3d.py
+
+新开一个控制台窗口，启动client3.py，让它创建500个连接同时连接到服务器：
+$ python client3.py --max-clients=500
+然后，服务器又一次崩了，是OSError的错误：抛了资源临时不可用的异常，当试图创建新的子进程时但创建不了时，因为达到了最大子进程数限制。以下为抛出的异常：
+
+BlockingIOError: [Errno 11] Resource temporarily unavailable
+
+看到了吧，如果你不处理好僵尸，服务器长时间运行就会出问题。我会简短讨论下服务器应该怎样处理僵尸问题。
+
+咱们简要重述下目前为止你已经学习到主要知识点：
+
+    如果不关闭复制描述符，客户端不会终止，因为客户端连接不会关闭。
+    如果不关闭复制描述符，长时间运行的服务器最终会耗尽可用文件描述符（最大打开文件）。
+    当fork了一个子进程，然后子进程退出了，父进程没有等它，而且没有收集它的终止状态，它就变成僵尸了。
+    僵尸要吃东西，我们的场景中，就是内存。服务器最终会耗尽可用进程（最大用户进程），如果不处理好僵尸的话。
+    僵尸杀不死的，你需要等它们。
+
+那么，处理好僵尸的话，要做什么呢？要修改服务器代码去等僵尸，获取它们的终止状态。通过调用wait系统调用就好啦。
+不幸的是，这不完美，因为如果调用wait，然而没有终止的子进程，wait就会阻塞服务器，实际上就是阻止了服务器处理新的客户端连接请求。
+有其他办法吗？当然有啦，其中之一就是使用信息处理器和wait系统调用组合。
+
