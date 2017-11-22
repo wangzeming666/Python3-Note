@@ -176,3 +176,100 @@ BACKLOG参数决定了内核为进入的连接请求准备的队列长度。
 
 现在我准备回答第二部分问题的答案了：“怎样才能让服务器同时处理多个请求？”或者换句话说，“怎样写一个并发服务器？”
 
+在Unix上写一个并发服务器最简单的方法是使用fork()系统调用。
+
+下面就是新的牛逼闪闪的并发服务器webserver3c.py的代码，它能同时处理多个客户端请求（和咱们迭代服务器例子webserver3b.py一样，每个子进程睡眠60秒）：
+###########################################################################
+# Concurrent server - webserver3c.py                                      #
+#                                                                         #
+# Tested with Python 2.7.9 & Python 3.4 on Ubuntu 14.04 & Mac OS X        #
+#                                                                         #
+# - Child process sleeps for 60 seconds after handling a client's request #
+# - Parent and child processes close duplicate descriptors                #
+#                                                                         #
+###########################################################################
+import os
+import socket
+import time
+
+SERVER_ADDRESS = (HOST, PORT) = '', 8888
+REQUEST_QUEUE_SIZE = 5
+
+def handle_request(client_connection):
+    request = client_connection.recv(1024)
+    print(
+        'Child PID: {pid}. Parent PID {ppid}'.format(
+            pid=os.getpid(),
+            ppid=os.getppid(),
+        )
+    )
+    print(request.decode())
+    http_response = b"""
+HTTP/1.1 200 OK
+
+Hello, World!
+"""
+    client_connection.sendall(http_response)
+    time.sleep(60)
+
+def serve_forever():
+    listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listen_socket.bind(SERVER_ADDRESS)
+    listen_socket.listen(REQUEST_QUEUE_SIZE)
+    print('Serving HTTP on port {port} ...'.format(port=PORT))
+    print('Parent PID (PPID): {pid}n'.format(pid=os.getpid()))
+
+    while True:
+        client_connection, client_address = listen_socket.accept()
+        pid = os.fork()
+        if pid == 0:  # child
+            listen_socket.close()  # close child copy
+            handle_request(client_connection)
+            client_connection.close()
+            os._exit(0)  # child exits here
+        else:  # parent
+            client_connection.close()  # close parent copy and loop over
+
+if __name__ == '__main__':
+    serve_forever()
+    
+像你以前那样试试用两个curl命令，自己看看，现在虽然服务器子进程在处理客户端请求时睡眠60秒，但不影响别的客户端，因为它们是被不同的完全独立的进程处理的。
+你应该能看到curl命令立刻就输出了“Hello, World!”，然后挂起60秒。
+你可以接着想运行多少curl命令就运行多少（嗯，几乎是任意多），它们都会立刻输出服务器的响应“Hello, Wrold”，而且不会有明显的延迟。试试看。
+
+理解fork()的最重要的点是，你fork了一次，但它返回了两次：一个是在父进程里，一个是在子进程里。当你fork了一个新进程，子进程返回的进程ID是0。
+父进程里fork返回的是子进程的PID。
+
+我仍然记得当我第一次知道它使用它时我对fork是有多着迷。它就像魔法一样。我正读着一段连续的代码，然后“duang”的一声：
+代码克隆了自己，然后就有两个相同代码的实例同时运行。我想除了魔法无法做到，我是认真哒。
+
+当父进程fork了一个新的子进程，子进程就获取了父进程文件描述符的拷贝
+
+你可能已经注意到啦，上面代码里的父进程关闭了客户端连接：
+else:  # parent
+    client_connection.close()  # close parent copy and loop over
+
+那么，如果它的父进程关闭了同一个socket，子进程为什么还能从客户端socket读取数据呢？答案就在上图。
+内核使用描述符引用计数来决定是否关闭socket。只有当描述符引用计数为0时才关闭socket。
+当服务器创建一个子进程，子进程获取了父进程的文件描述符拷贝，内核增加了这些描述符的引用计数。
+在一个父进程和一个子进程的场景中，客户端socket的描述符引用计数就成了2，当父进程关闭了客户端连接socket，它仅仅把引用计数减为1，
+不会引发内核关闭这个socket。子进程也把父进程的listen_socket拷贝给关闭了，因为子进程不用管接受新连接，它只关心处理已经连接的客户端的请求：
+listen_socket.close()  # close child copy
+本文后面我会讲下如果不关闭复制的描述符会发生什么。
+
+你从并发服务器源码看到啦，现在服务器父进程唯一的角色就是接受一个新的客户端连接，fork一个新的子进程来处理客户端请求，然后重复接受另一个客户端连接，
+就没有别的事做啦。服务器父进程不处理客户端请求——它的小弟（子进程）干这事。
+
+跑个题，我们说两个事件并发到底是什么意思呢？
+当我们说两个事件并发时，我们通常表达的是它们同时发生。简单来说，这也不错，但你要知道严格定义是这样的：
+如果你不能通过观察程序来知道哪个先发生的，那么这两个事件就是并发的。
+又到了简要重述目前为止已经学习的知识点和概念的时间啦.
+
+    在Unix下写一个并发服务器最简单的方法是使用fork()系统调用
+    当一个进程fork了一个新进程时，它就变成了那个新fork产生的子进程的父进程。
+    在调用fork后，父进程和子进程共享相同的文件描述符。
+    内核使用描述符引用计数来决定是否关闭文件/socket。
+    服务器父进程的角色是：现在它干的所有活就是接受一个新连接，fork一个子进来来处理这个请求，然后循环接受新连接。
+
+咱们来看看，如果在父进程和子进程中你不关闭复制的socket描述符会发生什么吧。以下是个修改后的版本，服务器不关闭复制的描述符，webserver3d.py：
