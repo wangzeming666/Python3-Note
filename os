@@ -41,3 +41,11 @@ such as a mail server’s external command delivery program.
 Some of these may not be available on all Unix platforms, since there is some variation. These constants are defined where 
 they are defined by the underlying platform.
 
+
+
+ os.wait()
+
+    等待子进程的完成，并返回包含其pid和退出状态指示的元组：一个16位数字，其低字节是终止进程的信号编号，并且其高字节是退出状态（如果信号数字为零）；
+    如果产生了核心文件，则设置低字节的高位。
+
+    可用的平台：Unix。
