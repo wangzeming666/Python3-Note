@@ -715,3 +715,30 @@ def serve_forever():
 if __name__ == '__main__':
     serve_forever()
 
+启动服务器
+
+使用测试客户端client3.py：
+$ python client3.py --max-clients 128
+
+现在验证一下没有僵尸了吧。哈！没有僵尸的日子真好！
+
+恭喜！这真是段很长的旅程啊，希望你喜欢。现在你已经拥有了自己的简单并发服务器，而且这个代码有助于你在将来的工作中开发一个产品级的Web服务器。
+
+我要把它留作练习，你来修改第二部分的WSGI服务器，让它达到并发。你在这里可以找到修改后的版本。但是你要自己实现后再看我的代码哟。你已经拥有了所有必要的信息，所以，去实现它吧！
+
+接下来做什么呢？就像Josh Billings说的那样，
+
+    像邮票那样——用心做一件事，直到完成。
+
+去打好基础吧。质疑你已经知道的，保持深入研究。
+
+
+    如果你只学方法，你就依赖方法。但如果你学会原理，你可以发明自己的方法。—— 爱默生
+
+以下是我挑出来对本文最重要的几本书。它们会帮你拓宽加深我提到的知识。我强烈建议你想言设法弄到这些书：从朋友那借也好，从本地图书馆借，或者从亚马逊买也行。它们是守护者：
+
+    Unix网络编程，卷1：socket网络API（第三版）
+    UNIX环境高级编程，第三版
+    Linux编程接口：Linux和UNIX系统编辑手册
+    TCP/IP详解，卷1：协议（第二版）
+    The Little Book of SEMAPHORES (2nd Edition): The Ins and Outs of Concurrency Control and Common Mistakes. Also available for free on the author’s site here.
