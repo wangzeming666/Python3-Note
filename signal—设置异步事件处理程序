@@ -10,3 +10,8 @@
 
     On Windows, signal() can only be called with SIGABRT, SIGFPE, SIGILL, SIGINT, SIGSEGV, or SIGTERM. 在任何其他情况下，
     将引发ValueError。请注意，并非所有系统都定义相同的信号名称集；如果信号名称未定义为SIG*模块级常数，则会引发AttributeError。
+
+ signal.SIG_DFL
+
+    这是两个标准信号处理选项之一；它将简单地执行信号的默认功能。例如，在大多数系统上，SIGQUIT的默认操作是转储核心和退出，而SIGCHLD的默认操作
+    是简单地忽略它。
