@@ -1,0 +1,12 @@
+ signal.signal(signalnum, handler)
+
+    将信号signalnum的处理程序设置为处理程序。处理程序可以是具有两个参数（见下文）或特殊值signal.SIG_IGN或signal.SIG_DFL的可调用Python对象。
+    将返回上一个信号处理程序（请参阅上面的getsignal()的描述）。（请参见Unix手册页信号（2）。）
+
+    当启用线程时，此函数只能从主线程调用；尝试从其他线程调用它将导致引发ValueError异常。
+
+    使用两个参数调用处理程序：信号编号和当前堆栈帧（None或帧对象；有关帧对象的描述，请参阅description in the type hierarchy中，
+    或查看inspect模块中的属性说明）。
+
+    On Windows, signal() can only be called with SIGABRT, SIGFPE, SIGILL, SIGINT, SIGSEGV, or SIGTERM. 在任何其他情况下，
+    将引发ValueError。请注意，并非所有系统都定义相同的信号名称集；如果信号名称未定义为SIG*模块级常数，则会引发AttributeError。
