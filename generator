@@ -1,0 +1,4 @@
+ generator.send(value)
+
+    恢复执行并将值“发送”到生成器函数中。value参数成为当前yield表达式的结果。如果生成器退出而不产生另一个值，则send()方法返回由生成器产生的下一个值，
+    或者引发StopIteration。当调用send()来启动生成器时，必须使用None作为参数来调用它，因为没有可以接收该值的yield表达式。
