@@ -25,3 +25,12 @@ generator.close()
 在生成器函数暂停的点处引发GeneratorExit。如果生成器函数然后正常退出、已经关闭或引发GeneratorExit（通过不捕获异常），close将返回其调用者。
 如果生成器产生一个值，则会引发RuntimeError。如果生成器引发任何其他异常，则将其传播给调用者。
 如果生成器由于异常或正常退出而已经退出，close()不会执行任何操作。
+
+中断Generator是一个非常灵活的技巧，可以通过throw抛出一个GeneratorExit异常来终止Generator。Close()方法作用是一样的，
+其实内部它是调用了throw(GeneratorExit)的。
+
+因此，当我们调用了close()方法后，再调用next()或是send(msg)的话会抛出一个异常：
+Traceback (most recent call last):
+  File "/home/evergreen/Codes/yidld.py", line 14, in <module>
+    d = c.send('Fighting!')  #d 获取了yield 12 的参数值12
+StopIteration
