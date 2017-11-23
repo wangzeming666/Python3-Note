@@ -49,3 +49,16 @@ they are defined by the underlying platform.
     如果产生了核心文件，则设置低字节的高位。
 
     可用的平台：Unix。
+
+
+
+ os.waitid(idtype, id, options)
+
+    等待一个或多个子进程的完成。idtype可以是P_PID，P_PGID或P_ALL。id指定要等待的pid。选项是从WEXITED，WSTOPPED或WCONTINUED中的一个或多个的
+    ORing构建的， WNOHANG或WNOWAIT。返回值是表示包含在siginfo_t结构中的数据的对象，即：si_pid，si_uid，si_signo ，si_status，
+    si_code或None如果指定WNOHANG，且没有处于可等待状态的子节点。
+
+    可用的平台：Unix。
+
+    版本3.3中的新功能。
+    
