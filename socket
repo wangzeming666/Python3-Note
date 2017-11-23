@@ -491,3 +491,227 @@ BlockingIOError: [Errno 11] Resource temporarily unavailable
 不幸的是，这不完美，因为如果调用wait，然而没有终止的子进程，wait就会阻塞服务器，实际上就是阻止了服务器处理新的客户端连接请求。
 有其他办法吗？当然有啦，其中之一就是使用信息处理器和wait系统调用组合。
 
+以下是如何工作的。当一个子进程终止了，内核发送SIGCHLD信号。父进程可以设置一个信号处理器来异步地被通知，然后就能wait子进程获取它的终止状态，
+因此阻止了僵尸进程出现。
+
+顺便说下，异步事件意味着父进程不会提前知道事件发生的时间。
+
+修改服务器代码，设置一个SIGCHLD事件处理器，然后在事件处理器里wait终止的子进程。webserver3e.py代码如下：
+###########################################################################
+# Concurrent server - webserver3e.py                                      #
+#                                                                         #
+# Tested with Python 2.7.9 & Python 3.4 on Ubuntu 14.04 & Mac OS X        #
+###########################################################################
+import os
+import signal
+import socket
+import time
+
+SERVER_ADDRESS = (HOST, PORT) = '', 8888
+REQUEST_QUEUE_SIZE = 5
+
+def grim_reaper(signum, frame):
+    pid, status = os.wait()
+    print(
+        'Child {pid} terminated with status {status}'
+        'n'.format(pid=pid, status=status)
+    )
+
+def handle_request(client_connection):
+    request = client_connection.recv(1024)
+    print(request.decode())
+    http_response = b"""
+HTTP/1.1 200 OK
+
+Hello, World!
+"""
+    client_connection.sendall(http_response)
+    # sleep to allow the parent to loop over to 'accept' and block there
+    time.sleep(3)
+
+def serve_forever():
+    listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listen_socket.bind(SERVER_ADDRESS)
+    listen_socket.listen(REQUEST_QUEUE_SIZE)
+    print('Serving HTTP on port {port} ...'.format(port=PORT))
+
+    signal.signal(signal.SIGCHLD, grim_reaper)
+
+    while True:
+        client_connection, client_address = listen_socket.accept()
+        pid = os.fork()
+        if pid == 0:  # child
+            listen_socket.close()  # close child copy
+            handle_request(client_connection)
+            client_connection.close()
+            os._exit(0)
+        else:  # parent
+            client_connection.close()
+
+if __name__ == '__main__':
+    serve_forever()
+    
+启动服务器
+
+使用老朋友curl给修改后的并发服务器发送请求：
+$ curl http://localhost:8888/hello
+
+观察服务器:
+Child 5230 terminated with status 0n
+
+刚才发生了什么？accept调用失败了，错误是EINTR。
+
+当子进程退出，引发SIGCHLD事件时，父进程阻塞在accept调用，这激活了事件处理器，然后当事件处理器完成时，accept系统调用就中断了：
+别着急，这个问题很好解决。你要做的就是重新调用accept。以下是修改后的代码：
+###########################################################################
+# Concurrent server - webserver3f.py                                      #
+#                                                                         #
+# Tested with Python 2.7.9 & Python 3.4 on Ubuntu 14.04 & Mac OS X        #
+###########################################################################
+import errno
+import os
+import signal
+import socket
+
+SERVER_ADDRESS = (HOST, PORT) = '', 8888
+REQUEST_QUEUE_SIZE = 1024
+
+def grim_reaper(signum, frame):
+    pid, status = os.wait()
+
+def handle_request(client_connection):
+    request = client_connection.recv(1024)
+    print(request.decode())
+    http_response = b"""
+HTTP/1.1 200 OK
+
+Hello, World!
+"""
+    client_connection.sendall(http_response)
+
+def serve_forever():
+    listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listen_socket.bind(SERVER_ADDRESS)
+    listen_socket.listen(REQUEST_QUEUE_SIZE)
+    print('Serving HTTP on port {port} ...'.format(port=PORT))
+
+    signal.signal(signal.SIGCHLD, grim_reaper)
+
+    while True:
+        try:
+            client_connection, client_address = listen_socket.accept()
+        except IOError as e:
+            code, msg = e.args
+            # restart 'accept' if it was interrupted
+            if code == errno.EINTR:
+                continue
+            else:
+                raise
+
+        pid = os.fork()
+        if pid == 0:  # child
+            listen_socket.close()  # close child copy
+            handle_request(client_connection)
+            client_connection.close()
+            os._exit(0)
+        else:  # parent
+            client_connection.close()  # close parent copy and loop over
+
+if __name__ == '__main__':
+    serve_forever()
+
+启动修改后的webserver3f.py：
+
+使用curl给修改后的服务器发送请求：
+$ curl http://localhost:8888/hello
+
+看到了吗？没有EINTR异常啦。现在，验证一下吧，没有僵尸了，带wait的SIGCHLD事件处理器也能处理好子进程了。怎么验证呢？只要运行ps命令，
+看看没有Z+状态的进程（没有进程）。太棒啦！没有僵尸在四周跳的感觉真安全呢！
+
+    如果fork了子进程并不wait它，它就成僵尸了。
+    使用SIGCHLD事件处理器来异步的wait终止了的子进程来获取它的终止状态
+    使用事件处理器时，你要明白，系统调用会被中断的，你要做好准备对付这种情况
+
+嗯，目前为止，一次都好。没有问题，对吧？好吧，几乎滑。再次跑下webserver3f.py，这次不用curl请求一次了，改用client3.py来创建128个并发连接：
+$ python client3.py --max-clients 128
+
+现在再运行ps命令
+$ ps auxw | grep -i python | grep -v grep
+
+看到了吧，少年，僵尸又回来了！
+
+这次又出什么错了呢？当你运行128个并发客户端时，建立了128个连接，子进程处理了请求然后几乎同时终止了，这就引发了SIGCHLD信号洪水般的发给父进程。
+问题在于，信号没有排队，父进程错过了一些信号，导致了一些僵尸到处跑没人管
+
+解决方案就是设置一个SIGCHLD事件处理器，但不用wait了，改用waitpid系统调用，带上WNOHANG参数，循环处理，确保所有的终止的子进程都被处理掉。
+以下是修改后的webserver3g.py：
+###########################################################################
+# Concurrent server - webserver3g.py                                      #
+#                                                                         #
+# Tested with Python 2.7.9 & Python 3.4 on Ubuntu 14.04 & Mac OS X        #
+###########################################################################
+import errno
+import os
+import signal
+import socket
+
+SERVER_ADDRESS = (HOST, PORT) = '', 8888
+REQUEST_QUEUE_SIZE = 1024
+
+def grim_reaper(signum, frame):
+    while True:
+        try:
+            pid, status = os.waitpid(
+                -1,          # Wait for any child process
+                 os.WNOHANG  # Do not block and return EWOULDBLOCK error
+            )
+        except OSError:
+            return
+
+        if pid == 0:  # no more zombies
+            return
+
+def handle_request(client_connection):
+    request = client_connection.recv(1024)
+    print(request.decode())
+    http_response = b"""
+HTTP/1.1 200 OK
+
+Hello, World!
+"""
+    client_connection.sendall(http_response)
+
+def serve_forever():
+    listen_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    listen_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    listen_socket.bind(SERVER_ADDRESS)
+    listen_socket.listen(REQUEST_QUEUE_SIZE)
+    print('Serving HTTP on port {port} ...'.format(port=PORT))
+
+    signal.signal(signal.SIGCHLD, grim_reaper)
+
+    while True:
+        try:
+            client_connection, client_address = listen_socket.accept()
+        except IOError as e:
+            code, msg = e.args
+            # restart 'accept' if it was interrupted
+            if code == errno.EINTR:
+                continue
+            else:
+                raise
+
+        pid = os.fork()
+        if pid == 0:  # child
+            listen_socket.close()  # close child copy
+            handle_request(client_connection)
+            client_connection.close()
+            os._exit(0)
+        else:  # parent
+            client_connection.close()  # close parent copy and loop over
+
+if __name__ == '__main__':
+    serve_forever()
+
