@@ -62,3 +62,92 @@ they are defined by the underlying platform.
 
     版本3.3中的新功能。
     
+ os.walk(top, topdown=True, onerror=None, followlinks=False)
+
+    遍历目录树，自顶向下或自底向上生成目录树下的文件名。对根目录top（包括根目录top本身）中的每个目录，它都会yield一个3元元组(dirpath, dirnames, filenames)。
+
+    dirpath是一个字符串，为目录路径。dirnames是dirpath中子目录的名称列表（不包括'.'和'..')。filenames 为dirpath 下非目录文件的名称列表。注意，列表中的名称不包含路径部分。要获得dirpath 中的文件或目录的完整路径(以 top开头), 请使用os.path.join(dirpath, name).
+
+    如果可选参数topdown为True或未指定，则在生成其任何子目录的三元组tuple之前生成其本身的三元组tuple。（简言之就是自上而下遍历）如果topdown是False，则在生成所有子目录的三元组之后生成其本身的三元组（即自下而上生成）。No matter the value of topdown, the list of subdirectories is retrieved before the tuples for the directory and its subdirectories are generated.
+
+    当topdown是True时，调用者可以修改dirnames列表（可能使用del ）和walk()只会递归到名称保留在dirnames中的子目录；这可以用于修剪搜索，强加特定的访问顺序，或甚至通知walk()关于调用者在恢复walk()再次。在topdown为False时修改dir名称对步行的行为没有影响，因为在自下而上模式下，在生成dirpath之前生成。
+
+    默认情况下，来自listdir()的错误将被忽略。如果指定了可选参数onerror，它应该是一个函数；it will be called with one argument, an OSError instance.它可以报告错误以继续遍历还是引发一个异常以停止遍历。请注意，文件名可用作异常对象的filename属性。
+
+    默认情况下，walk()不会向下走到符号链接解析到目录。将followlinks设置为True以访问支持它们的系统上symlinks指向的目录。
+
+    注
+
+    请注意，如果链接指向自身的父目录，将followlinks设置为True可能会导致无限递归。walk()不会跟踪其访问过的目录。
+
+    注
+
+    如果传递相对路径名，请不要在walk()的恢复之间更改当前工作目录。walk()从不更改当前目录，并假定其调用者也不会。
+
+    下面的例子显示每个目录下非目录文件占用的字节数，CVS 子目录除外：
+
+    import os
+    from os.path import join, getsize
+    for root, dirs, files in os.walk('python/Lib/email'):
+        print(root, "consumes", end=" ")
+        print(sum(getsize(join(root, name)) for name in files), end=" ")
+        print("bytes in", len(files), "non-directory files")
+        if 'CVS' in dirs:
+            dirs.remove('CVS')  # don't visit CVS directories
+
+    在下一个示例中（shutil.rmtree()的简单实现），从下到上行走树是必要的，rmdir()不允许在目录为空：
+
+    # Delete everything reachable from the directory named in "top",
+    # assuming there are no symbolic links.
+    # CAUTION:  This is dangerous!  For example, if top == '/', it
+    # could delete all your disk files.
+    import os
+    for root, dirs, files in os.walk(top, topdown=False):
+        for name in files:
+            os.remove(os.path.join(root, name))
+        for name in dirs:
+            os.rmdir(os.path.join(root, name))
+
+    在版本3.5中更改：此函数现在调用os.scandir()而不是os.listdir()调用os.stat()。
+
+
+
+os.fwalk(top='.', topdown=True, onerror=None, *, follow_symlinks=False, dir_fd=None)
+
+    行为与walk()非常类似，不同的是它产生一个4元组(dirpath, dirnames, filenames, dirfd)，并支持dir_fd。
+
+    dirpath, dirnames and filenames are identical to walk() output, and dirfd is a file descriptor referring to the directory dirpath.
+
+    This function always supports paths relative to directory descriptors and not following symlinks. 但请注意，与其他函数不同，fwalk() follow_symlinks的默认值为False。
+
+    注
+
+    由于fwalk()产生文件描述器，所以它们只在下一个迭代步骤有效，因此你应该复制它们。与dup()）如果你想保持它们更长。
+
+    下面的例子显示每个目录下非目录文件占用的字节数，CVS 子目录除外：
+
+    import os
+    for root, dirs, files, rootfd in os.fwalk('python/Lib/email'):
+        print(root, "consumes", end="")
+        print(sum([os.stat(name, dir_fd=rootfd).st_size for name in files]),
+              end="")
+        print("bytes in", len(files), "non-directory files")
+        if 'CVS' in dirs:
+            dirs.remove('CVS')  # don't visit CVS directories
+
+    在下一个示例中，从下到上行走树是必不可少的：rmdir()不允许在目录为空之前删除目录：
+
+    # Delete everything reachable from the directory named in "top",
+    # assuming there are no symbolic links.
+    # CAUTION:  This is dangerous!  For example, if top == '/', it
+    # could delete all your disk files.
+    import os
+    for root, dirs, files, rootfd in os.fwalk(top, topdown=False):
+        for name in files:
+            os.unlink(name, dir_fd=rootfd)
+        for name in dirs:
+            os.rmdir(name, dir_fd=rootfd)
+
+    可用的平台：Unix。
+
+    版本3.3中的新功能。
